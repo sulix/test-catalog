@@ -1,0 +1,54 @@
+# List of tests by subsystem
+# #
+# # Tests should adhere to KTAP definitions for results
+# #
+# # Description of section entries
+# #
+# #  maintainer:    test maintainer - name <email>
+# #  list:                mailing list for discussion
+# #  version:         stable version of the test
+# #  dependency: necessary distro package for testing
+# #  test:
+# #    path:            internal git path or url to fetch from
+# #    cmd:            command to run; ability to run locally
+# #    param:         additional param necessary to run test
+# #  hardware:      hardware necessary for validation
+# #
+# # Subsystems (alphabetical)
+
+ARM64:
+  maintainer:
+    - name: Mark Brown
+      email: broonie@kernel.org
+  list:
+  dependency:
+  test:
+    - name: smoke
+      working_directory: ./tools/testing/selftests
+      cmd: make TARGETS=arm64 run_tests
+  hardware: arm64
+
+FTRACE:
+  maintainer:
+    - name: Steven Rostedt
+      email: rostedt@goodmis.org
+  list:
+  dependency:
+  test:
+    - name: smoke
+      working_directory: ./tools/testing/selftests/ftrace
+      cmd: ./ftracetest
+
+KUNIT TEST:
+  maintainer:
+    - name: David Gow
+      email: davidgow@google.com
+  list:
+  dependency:
+    - python3-mypy
+  test:
+    - name: smoke
+      cmd: ./tools/testing/kunit/kunit.py
+      param: run --kunitconfig lib/kunit
+  hardware: arm64, x86_64
+
