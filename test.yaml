@@ -47,8 +47,16 @@ KUNIT TEST:
   dependency:
     - python3-mypy
   test:
-    - name: smoke
+    - name: kunit-tool-test
+      cmd: ./tools/testing/kunit/kunit_tool_test.py
+      working_directory: .
+    - name: uml
       cmd: ./tools/testing/kunit/kunit.py
-      param: run --kunitconfig lib/kunit
+      working_directory: .
+      param: run --kunitconfig lib/kunit --build_dir=.kunit-uml
+    - name: x86_64
+      cmd: ./tools/testing/kunit/kunit.py
+      working_directory: .
+      param: run --arch x86_64 --kunitconfig lib/kunit --build_dir=.kunit-x86_64
   hardware: arm64, x86_64
 

@@ -3,11 +3,21 @@
 # Copyright Don Zickus <dzickus@redhat.com>
 
 from argparse import ArgumentParser
+from concurrent import futures
 import os
 import sys
+import datetime
 import logging
+import textwrap
 import traceback
 import yaml
+import subprocess
+from typing import Dict, List, Sequence
+
+
+TIMEOUT = datetime.timedelta(minutes=5).total_seconds()
+def run_cmd(cmdline,  cwd) -> None:
+	subprocess.check_output(cmdline, stderr=subprocess.STDOUT, cwd=cwd, timeout=TIMEOUT, shell=True)
 
 
 class TestPlan:
@@ -51,7 +61,46 @@ class TestPlan:
             env = f"{test['Env']}" if test['Env'] else ""
             param = f"{test['Param']}" if test['Param'] else ""
 
-            output += f"{wd}{env}{test['Cmd']}{param}"
+            output += f"{wd}{env}{test['Cmd']} {param}"
+
+        return output
+
+    def run_cmd(self):
+        """Print the test command."""
+        output = ""
+        future_to_name: Dict[futures.Future[None], str] = {}
+        executor = futures.ThreadPoolExecutor(max_workers=len(self.tests))
+        for (name, test) in self.tests.items():
+            wd = f"{test['Working Directory']}" if test['Working Directory'] else "."
+            env = f"{test['Env']}" if test['Env'] else ""
+            param = f"{test['Param']}" if test['Param'] else ""
+
+            output = f"{test['Cmd']} {param}"
+            f = executor.submit(run_cmd, output, wd)
+            future_to_name[f] = name
+
+        has_failures = False
+        print(f'Waiting on {len(future_to_name)} checks ({", ".join(future_to_name.values())})...')
+        for f in  futures.as_completed(future_to_name.keys()):
+            name = future_to_name[f]
+            ex = f.exception()
+            if not ex:
+                print(f'{name}: PASSED')
+                continue
+
+            has_failures = True
+            if isinstance(ex, subprocess.TimeoutExpired):
+                print(f'{name}: TIMED OUT')
+            elif isinstance(ex, subprocess.CalledProcessError):
+                print(f'{name}: FAILED')
+            else:
+                print(f'{name}: unexpected exception: {ex}')
+                continue
+
+            output = ex.output
+            if output:
+                print(textwrap.indent(output.decode(), '> '))
+        executor.shutdown()
 
         return output
 
@@ -180,7 +229,7 @@ def read_yaml(yaml_file):
     return sections
 
 
-def output_section(data, user_subsystem, info):
+def output_section(data, user_subsystem, info, run):
     """Provide test output based on user selected subsystem and args."""
     if user_subsystem not in data.subsystems:
         sys.stderr.write(f'No subsystem: {user_subsystem} in provide yaml file\n')
@@ -190,6 +239,8 @@ def output_section(data, user_subsystem, info):
     subsystem = data.subsystems[user_subsystem]
     if info:
         print(subsystem)
+    elif run:
+        subsystem.test.run_cmd()
     else:
         print(f'{subsystem.test.print_cmd()}')
 
@@ -202,6 +253,7 @@ def main():
     parser.add_argument('-f', '--file', help='YAML with tests to use.  Default test.yaml')
     parser.add_argument('-i', '--info', action='store_true',
                         help='Print info about tests')
+    parser.add_argument('-r', '--run', action='store_true', help='Run the listed tests')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Verbose output')
 
@@ -215,7 +267,7 @@ def main():
     config_logging(args.verbose)
 
     data = read_yaml(args.file)
-    output_section(data, subsystem, args.info)
+    output_section(data, subsystem, args.info, args.run)
     sys.exit(0)
 
 
