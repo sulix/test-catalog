@@ -48,8 +48,8 @@ class TestPlan:
         output = ""
         for test in self.tests.values():
             wd = f"cd {test['Working Directory']} && " if test['Working Directory'] else ""
-            env = f"{test['Env']}" if test['Env'] else ""
-            param = f"{test['Param']}" if test['Param'] else ""
+            env = f"{test['Env']} " if test['Env'] else ""
+            param = f" {test['Param']}" if test['Param'] else ""
 
             output += f"{wd}{env}{test['Cmd']}{param}"
 

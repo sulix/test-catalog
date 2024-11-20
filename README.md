@@ -32,6 +32,6 @@ Find copy-n-pastable tests for a subsystem
 ./get_tests.py -s 'KUNIT TEST'
 ```
 ```
-./tools/testing/kunit/kunit.pyrun --kunitconfig lib/kunit
+./tools/testing/kunit/kunit.py run --kunitconfig lib/kunit
 ```
 
